@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  firstName    String
+  lastName     String
+  role         Role      @default(EMPLOYEE)
+  isActive     Boolean   @default(true)
+  officeId     String?
+  office       Office?   @relation(fields: [officeId], references: [id])
+  attendances  Attendance[]
+  refreshTokens RefreshToken[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Office {
+  id          String    @id @default(uuid())
+  name        String
+  address     String
+  latitude    Float
+  longitude   Float
+  radius      Int       @default(50) // meters
+  isActive    Boolean   @default(true)
+  employees   User[]
+  qrTokens    QRToken[]
+  attendances Attendance[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("offices")
+}
+
+model QRToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  officeId  String
+  office    Office    @relation(fields: [officeId], references: [id])
+  expiresAt DateTime
+  usedAt    DateTime?
+  isUsed    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@map("qr_tokens")
+}
+
+model Attendance {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  officeId    String
+  office      Office           @relation(fields: [officeId], references: [id])
+  checkInAt   DateTime         @default(now())
+  checkOutAt  DateTime?
+  latitude    Float
+  longitude   Float
+  status      AttendanceStatus @default(PRESENT)
+  qrTokenId   String?
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("attendances")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
